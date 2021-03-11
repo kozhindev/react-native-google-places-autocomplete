@@ -795,6 +795,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
             ]}
             value={stateText}
             placeholder={props.placeholder}
+            autoFocus={props.autoFocus}
             onFocus={
               onFocus
                 ? () => {
@@ -802,14 +803,6 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
                     onFocus();
                   }
                 : _onFocus
-            }
-            onBlur={
-              onBlur
-                ? (e) => {
-                    _onBlur(e);
-                    onBlur();
-                  }
-                : _onBlur
             }
             clearButtonMode={clearButtonMode || 'while-editing'}
             onChangeText={_handleChangeText}
@@ -826,6 +819,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
 
 GooglePlacesAutocomplete.propTypes = {
   autoFillOnNotFound: PropTypes.bool,
+  autoFocus: PropTypes.bool,
   currentLocation: PropTypes.bool,
   currentLocationLabel: PropTypes.string,
   debounce: PropTypes.number,
@@ -872,6 +866,7 @@ GooglePlacesAutocomplete.propTypes = {
 
 GooglePlacesAutocomplete.defaultProps = {
   autoFillOnNotFound: false,
+  autoFocus: false,
   currentLocation: false,
   currentLocationLabel: 'Current location',
   debounce: 0,
