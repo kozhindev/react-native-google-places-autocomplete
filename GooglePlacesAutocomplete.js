@@ -142,6 +142,16 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // autoFocus={true} prop on TextInput doesn't do the trick with keyboard, so open it manually
+  // without setTimeout keyboard won't be opened
+  useEffect(() => {
+    if (inputRef) {
+      setTimeout(() => {
+        inputRef.current.focus();
+      }, 150);
+    }
+  }, []);
+
   useImperativeHandle(ref, () => ({
     setAddressText: (address) => {
       setStateText(address);
