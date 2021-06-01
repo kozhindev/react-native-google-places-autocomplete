@@ -21,6 +21,7 @@ import {
   TextInput,
   TouchableHighlight,
   View,
+  InteractionManager
 } from 'react-native';
 
 const defaultStyles = {
@@ -130,7 +131,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
   );
   const [url] = useState(getRequestUrl(props.requestUrl));
 
-  const inputRef = useRef();
+  const inputRef = React.useRef();
 
   useEffect(() => {
     // This will load the default value's search results after the view has
@@ -141,16 +142,21 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // autoFocus={true} prop on TextInput doesn't do the trick with keyboard, so open it manually
-  // without setTimeout keyboard won't be opened
   useEffect(() => {
-    if (inputRef) {
-      setTimeout(() => {
-        inputRef.current.focus();
-      }, 150);
+    // Update dataSource if props.predefinedPlaces changed
+    setDataSource(buildRowsFromResults([]))
+  }, [props.predefinedPlaces])
+  useEffect(() => {
+    if (props.autoFocus && inputRef.current) {
+      if (inputRef.current) {
+        InteractionManager.runAfterInteractions(() => {
+          setTimeout(() => {
+            inputRef.current?.focus();
+          }, 300)
+        });
+      }
     }
-  }, []);
+  }, [props.autoFocus, inputRef]);
 
   useImperativeHandle(ref, () => ({
     setAddressText: (address) => {
@@ -161,6 +167,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
     focus: () => inputRef.current.focus(),
     isFocused: () => inputRef.current.isFocused(),
     clear: () => inputRef.current.clear(),
+    getCurrentLocation,
   }));
 
   const requestShouldUseWithCredentials = () =>
@@ -535,7 +542,7 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debounceData = useMemo(() => debounce(_request, props.debounce), []);
+  const debounceData = useMemo(() => debounce(_request, props.debounce), [props.query]);
 
   const _onChangeText = (text) => {
     setStateText(text);
@@ -671,7 +678,9 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
   const _onBlur = (e) => {
     if (e && isNewFocusInAutocompleteResultList(e)) return;
 
-    setListViewDisplayed(false);
+    if (!props.keepResultsAfterBlur) {
+      setListViewDisplayed(false);
+    }
     inputRef?.current?.blur();
   };
 
@@ -791,32 +800,24 @@ export const GooglePlacesAutocomplete = forwardRef((props, ref) => {
     >
       {!props.textInputHide && (
         <View
-          style={[
-            props.suppressDefaultStyles ? {} : defaultStyles.textInputContainer,
-            props.styles.textInputContainer,
-          ]}
+            style={[
+              props.suppressDefaultStyles ? {} : defaultStyles.textInputContainer,
+              props.styles.textInputContainer,
+            ]}
         >
           {_renderLeftButton()}
           <TextInputComp
-            ref={inputRef}
-            style={[
-              props.suppressDefaultStyles ? {} : defaultStyles.textInput,
-              props.styles.textInput,
-            ]}
-            value={stateText}
-            placeholder={props.placeholder}
-            autoFocus={props.autoFocus}
-            onFocus={
-              onFocus
-                ? () => {
-                    _onFocus();
-                    onFocus();
-                  }
-                : _onFocus
-            }
-            clearButtonMode={clearButtonMode || 'while-editing'}
-            onChangeText={_handleChangeText}
-            {...userProps}
+              ref={inputRef}
+              style={[
+                props.suppressDefaultStyles ? {} : defaultStyles.textInput,
+                props.styles.textInput,
+              ]}
+              value={stateText}
+              placeholder={props.placeholder}
+              onFocus={_onFocus}
+              clearButtonMode={clearButtonMode || 'while-editing'}
+              onChangeText={_handleChangeText}
+              {...userProps}
           />
           {_renderRightButton()}
         </View>
@@ -845,7 +846,9 @@ GooglePlacesAutocomplete.propTypes = {
   keyboardShouldPersistTaps: PropTypes.oneOf(['never', 'always', 'handled']),
   listEmptyComponent: PropTypes.func,
   listUnderlayColor: PropTypes.string,
-  listViewDisplayed: PropTypes.oneOf(['auto', PropTypes.bool]),
+  // Must write it this way: https://stackoverflow.com/a/54290946/7180620
+  listViewDisplayed: PropTypes.oneOfType([PropTypes.bool, PropTypes.oneOf(['auto'])]),
+  keepResultsAfterBlur: PropTypes.bool,
   minLength: PropTypes.number,
   nearbyPlacesAPI: PropTypes.string,
   numberOfLines: PropTypes.number,
@@ -895,6 +898,7 @@ GooglePlacesAutocomplete.defaultProps = {
   keyboardShouldPersistTaps: 'always',
   listUnderlayColor: '#c8c7cc',
   listViewDisplayed: 'auto',
+  keepResultsAfterBlur: false,
   minLength: 0,
   nearbyPlacesAPI: 'GooglePlacesSearch',
   numberOfLines: 1,
